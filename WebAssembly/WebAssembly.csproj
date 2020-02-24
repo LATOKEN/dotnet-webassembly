@@ -12,7 +12,7 @@
     <Copyright>Copyright © Ryan Lamansky. All rights reserved.</Copyright>
     <PackageTags>WebAssembly WASM JIT</PackageTags>
     <LangVersion>8.0</LangVersion>
-    <Nullable>enable</Nullable>
+    <Nullable>annotations</Nullable>
     <RepositoryUrl>https://github.com/RyanLamansky/dotnet-webassembly</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <SignAssembly>true</SignAssembly>

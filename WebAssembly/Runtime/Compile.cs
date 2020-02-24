@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.ExceptionServices;
 using WebAssembly.Runtime.Compilation;
+using WebAssembly.Gas;
 
 namespace WebAssembly.Runtime
 {
@@ -1126,9 +1127,9 @@ namespace WebAssembly.Runtime
                                 var gasSum = 0UL;
                                 foreach (var instruction in Instruction.Parse(reader))
                                 {
-                                    gasSum += instruction.Gas;
+                                    gasSum += instruction.Gas();
                                     
-                                    if (gasSum > GasThreshold || gasSum > 0 && instruction.FlowControl)
+                                    if (gasSum > GasThreshold || gasSum > 0 && instruction.IsFlowControl())
                                     {
                                         context.Emit(OpCodes.Ldsfld, gasLimitField);
                                         context.Emit(OpCodes.Ldc_I4, (uint) gasSum);
