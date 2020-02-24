@@ -9,6 +9,7 @@ using WebAssembly.Runtime.Compilation;
 
 namespace WebAssembly.Runtime
 {
+
     /// <summary>
     /// Creates a new instance of a compiled WebAssembly module.
     /// </summary>
@@ -23,11 +24,22 @@ namespace WebAssembly.Runtime
     /// </summary>
     public static class Compile
     {
+        /// <summary>
+        /// Gas limit
+        /// </summary>
+        public const ulong DefaultGasLimit = 4_000_000_000;
+        
+        /// <summary>
+        /// Gas threshold to inject gas mettering code.
+        /// </summary>
+        public const ulong GasThreshold = 100_000_000;
+
 #if FILESTREAM
         /// <summary>
         /// Uses streaming compilation to create an executable <see cref="Instance{TExports}"/> from a binary WebAssembly source.
         /// </summary>
         /// <param name="path">The path to the file that contains a WebAssembly binary stream.</param>
+        /// <param name="gasLimit">Gas limit</param>
         /// <returns>The module.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> cannot be null.</exception>
         /// <exception cref="ArgumentException">
@@ -41,10 +53,10 @@ namespace WebAssembly.Runtime
         /// The specified path, file name, or both exceed the system-defined maximum length.
         /// For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="ModuleLoadException">An error was encountered while reading the WebAssembly file.</exception>
-        public static InstanceCreator<TExports> FromBinary<TExports>(string path)
+        public static InstanceCreator<TExports> FromBinary<TExports>(string path, ulong gasLimit = DefaultGasLimit)
         where TExports : class
         {
-            return FromBinary<TExports>(path, new CompilerConfiguration());
+            return FromBinary<TExports>(path, new CompilerConfiguration(), gasLimit);
         }
 
         /// <summary>
@@ -52,6 +64,7 @@ namespace WebAssembly.Runtime
         /// </summary>
         /// <param name="path">The path to the file that contains a WebAssembly binary stream.</param>
         /// <param name="configuration">Configures the compiler.</param>
+        /// <param name="gasLimit">Gas limit</param>
         /// <returns>The module.</returns>
         /// <exception cref="ArgumentNullException">No parameters can be null.</exception>
         /// <exception cref="ArgumentException">
@@ -65,12 +78,12 @@ namespace WebAssembly.Runtime
         /// The specified path, file name, or both exceed the system-defined maximum length.
         /// For example, on Windows-based platforms, paths must be less than 248 characters, and file names must be less than 260 characters.</exception>
         /// <exception cref="ModuleLoadException">An error was encountered while reading the WebAssembly file.</exception>
-        public static InstanceCreator<TExports> FromBinary<TExports>(string path, CompilerConfiguration configuration)
+        public static InstanceCreator<TExports> FromBinary<TExports>(string path, CompilerConfiguration configuration, ulong gasLimit = DefaultGasLimit)
         where TExports : class
         {
             using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4 * 1024, FileOptions.SequentialScan))
             {
-                return FromBinary<TExports>(stream, configuration);
+                return FromBinary<TExports>(stream, configuration, gasLimit);
             }
         }
 #endif
@@ -79,12 +92,13 @@ namespace WebAssembly.Runtime
         /// Uses streaming compilation to create an executable <see cref="Instance{TExports}"/> from a binary WebAssembly source.
         /// </summary>
         /// <param name="input">The source of data.  The stream is left open after reading is complete.</param>
+        /// <param name="gasLimit">Gas limit</param>
         /// <returns>A function that creates instances on demand.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="input"/> cannot be null.</exception>
-        public static InstanceCreator<TExports> FromBinary<TExports>(Stream input)
+        public static InstanceCreator<TExports> FromBinary<TExports>(Stream input, ulong gasLimit = DefaultGasLimit)
         where TExports : class
         {
-            return FromBinary<TExports>(input, new CompilerConfiguration());
+            return FromBinary<TExports>(input, new CompilerConfiguration(), gasLimit);
         }
 
         /// <summary>
@@ -92,9 +106,10 @@ namespace WebAssembly.Runtime
         /// </summary>
         /// <param name="input">The source of data.  The stream is left open after reading is complete.</param>
         /// <param name="configuration">Configures the compiler.</param>
+        /// <param name="gasLimit">Gas limit</param>
         /// <returns>A function that creates instances on demand.</returns>
         /// <exception cref="ArgumentNullException">No parameters can be null.</exception>
-        public static InstanceCreator<TExports> FromBinary<TExports>(Stream input, CompilerConfiguration configuration)
+        public static InstanceCreator<TExports> FromBinary<TExports>(Stream input, CompilerConfiguration configuration, ulong gasLimit = DefaultGasLimit)
         where TExports : class
         {
             var exportInfo = typeof(TExports).GetTypeInfo();
@@ -110,7 +125,8 @@ namespace WebAssembly.Runtime
                         reader,
                         configuration,
                         typeof(Instance<TExports>),
-                        typeof(TExports)
+                        typeof(TExports),
+                        gasLimit
                         );
                 }
                 catch (OverflowException x)
@@ -169,7 +185,8 @@ namespace WebAssembly.Runtime
             Reader reader,
             CompilerConfiguration configuration,
             Type instanceContainer,
-            Type exportContainer
+            Type exportContainer, 
+            ulong gasLimit
             )
         {
             if (configuration == null)
@@ -232,11 +249,12 @@ namespace WebAssembly.Runtime
                 FieldAttributes.Private |
                 FieldAttributes.InitOnly
                 ;
-
+            
             var context = new CompilationContext(configuration);
             var exportsBuilder = context.CheckedExportsBuilder = module.DefineType("CompiledExports", classAttributes, exportContainer);
             MethodBuilder? importedMemoryProvider = null;
             FieldBuilder? memory = null;
+            var gasLimitField = exportsBuilder.DefineField("💩 GasLimit", typeof(ulong), FieldAttributes.Public | FieldAttributes.Static);
 
             ILGenerator instanceConstructorIL;
             {
@@ -1105,8 +1123,20 @@ namespace WebAssembly.Runtime
                                     il.DeclareLocal(local.ToSystemType());
                                 }
 
+                                var gasSum = 0UL;
                                 foreach (var instruction in Instruction.Parse(reader))
                                 {
+                                    gasSum += instruction.Gas;
+                                    
+                                    if (gasSum > GasThreshold || gasSum > 0 && instruction.FlowControl)
+                                    {
+                                        context.Emit(OpCodes.Ldsfld, gasLimitField);
+                                        context.Emit(OpCodes.Ldc_I4, (uint) gasSum);
+                                        context.Emit(OpCodes.Sub_Ovf_Un);
+                                        context.Emit(OpCodes.Stsfld, gasLimitField);
+                                        gasSum = 0;
+                                    }
+                                    
                                     instruction.Compile(context);
                                     context.Previous = instruction.OpCode;
                                 }
@@ -1231,6 +1261,10 @@ namespace WebAssembly.Runtime
                 instanceConstructorIL.Emit(OpCodes.Call, startFunction);
             }
 
+            instanceConstructorIL.Emit(OpCodes.Ldarg_0);
+            instanceConstructorIL.Emit(OpCodes.Ldc_I4, (int) gasLimit);
+            instanceConstructorIL.Emit(OpCodes.Conv_U4);
+            instanceConstructorIL.Emit(OpCodes.Stfld, gasLimitField);
             instanceConstructorIL.Emit(OpCodes.Ret); //Finish the constructor.
             var exportInfo = exportsBuilder.CreateTypeInfo();
 
