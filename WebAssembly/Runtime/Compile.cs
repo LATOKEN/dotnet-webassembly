@@ -1255,15 +1255,15 @@ namespace WebAssembly.Runtime
                     {
                         switch (parm)
                         {
-                            // case 0:
-                            //     il.Emit(OpCodes.Ldarg_1);
-                            //     break;
-                            // case 1:
-                            //     il.Emit(OpCodes.Ldarg_2);
-                            //     break;
-                            // case 2: 
-                            //     il.Emit(OpCodes.Ldarg_3);
-                            //     break;
+                            case 0:
+                                il.Emit(OpCodes.Ldarg_1);
+                                break;
+                            case 1:
+                                il.Emit(OpCodes.Ldarg_2);
+                                break;
+                            case 2: 
+                                il.Emit(OpCodes.Ldarg_3);
+                                break;
                             default:
                                 il.Emit(OpCodes.Ldarg, (short) (parm + 1));
                                 break;
