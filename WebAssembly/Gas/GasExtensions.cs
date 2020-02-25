@@ -179,7 +179,7 @@ namespace WebAssembly.Gas
                 {OpCode.Int32TruncateFloat32Signed, new OpCodeMeteringMetadata(90, false)},
                 {OpCode.Int32TruncateFloat32Unsigned, new OpCodeMeteringMetadata(90, false)},
                 {OpCode.Int32TruncateFloat64Signed, new OpCodeMeteringMetadata(90, false)},
-                {OpCode.Int32TruncateFloat32Unsigned, new OpCodeMeteringMetadata(90, false)},
+                {OpCode.Int32TruncateFloat64Unsigned, new OpCodeMeteringMetadata(90, false)},
                 {OpCode.Int64ExtendInt32Signed, new OpCodeMeteringMetadata(90, false)},
                 {OpCode.Int64ExtendInt32Unsigned, new OpCodeMeteringMetadata(90, false)},
                 {OpCode.Int64TruncateFloat32Signed, new OpCodeMeteringMetadata(90, false)},
