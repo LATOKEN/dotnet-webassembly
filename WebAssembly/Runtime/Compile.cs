@@ -1129,10 +1129,14 @@ namespace WebAssembly.Runtime
                                 {
                                     gasSum += instruction.Gas();
                                     
-                                    if (gasSum > GasThreshold || gasSum > 0 && instruction.IsFlowControl())
+                                    // Emit gas metering if threshold is reached or if code branches
+                                    // Also, do not emit gas metering on the last end in function immediately after return
+                                    if ((gasSum > GasThreshold || gasSum > 0 && instruction.IsFlowControl()) &&
+                                        !(instruction.OpCode == OpCode.End && context.Previous == OpCode.Return))
                                     {
                                         context.Emit(OpCodes.Ldsfld, gasLimitField);
-                                        context.Emit(OpCodes.Ldc_I4, (uint) gasSum);
+                                        context.Emit(OpCodes.Ldc_I8, (long) gasSum);
+                                        context.Emit(OpCodes.Conv_U8);
                                         context.Emit(OpCodes.Sub_Ovf_Un);
                                         context.Emit(OpCodes.Stsfld, gasLimitField);
                                         gasSum = 0;
@@ -1248,7 +1252,23 @@ namespace WebAssembly.Runtime
 
                     var il = method.GetILGenerator();
                     for (var parm = 0; parm < signature.ParameterTypes.Length; parm++)
-                        il.Emit(OpCodes.Ldarg, parm + 1);
+                    {
+                        switch (parm)
+                        {
+                            // case 0:
+                            //     il.Emit(OpCodes.Ldarg_1);
+                            //     break;
+                            // case 1:
+                            //     il.Emit(OpCodes.Ldarg_2);
+                            //     break;
+                            // case 2: 
+                            //     il.Emit(OpCodes.Ldarg_3);
+                            //     break;
+                            default:
+                                il.Emit(OpCodes.Ldarg, (short) (parm + 1));
+                                break;
+                        }
+                    }
 
                     il.Emit(OpCodes.Ldarg_0);
                     il.Emit(OpCodes.Call, internalFunctions[exported.Value]);
@@ -1262,10 +1282,11 @@ namespace WebAssembly.Runtime
                 instanceConstructorIL.Emit(OpCodes.Call, startFunction);
             }
 
-            instanceConstructorIL.Emit(OpCodes.Ldarg_0);
-            instanceConstructorIL.Emit(OpCodes.Ldc_I4, (int) gasLimit);
-            instanceConstructorIL.Emit(OpCodes.Conv_U4);
-            instanceConstructorIL.Emit(OpCodes.Stfld, gasLimitField);
+            instanceConstructorIL.Emit(OpCodes.Ldc_I8, (long) gasLimit);
+            instanceConstructorIL.Emit(OpCodes.Conv_U8);
+            instanceConstructorIL.Emit(OpCodes.Stsfld, gasLimitField);
+            instanceConstructorIL.EmitWriteLine(gasLimitField);
+            
             instanceConstructorIL.Emit(OpCodes.Ret); //Finish the constructor.
             var exportInfo = exportsBuilder.CreateTypeInfo();
 
