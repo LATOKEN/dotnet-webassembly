@@ -7,6 +7,7 @@ using System.Reflection.Emit;
 using System.Runtime.ExceptionServices;
 using WebAssembly.Runtime.Compilation;
 using WebAssembly.Gas;
+using Lokad.ILPack;
 
 namespace WebAssembly.Runtime
 {
@@ -181,6 +182,8 @@ namespace WebAssembly.Runtime
             public readonly uint Count;
             public readonly WebAssemblyValueType Type;
         }
+        
+        private static string?[] debugNames = {};
 
         private static ConstructorInfo FromBinary(
             Reader reader,
@@ -302,8 +305,11 @@ namespace WebAssembly.Runtime
                     case Section.None:
                         {
                             var preNameOffset = reader.Offset;
-                            reader.ReadString(reader.ReadVarUInt32()); //Name
-                            reader.ReadBytes(payloadLength - checked((uint)(reader.Offset - preNameOffset))); //Content
+                            // reader.ReadString(reader.ReadVarUInt32()); //Name
+                            // reader.ReadBytes(payloadLength - checked((uint)(reader.Offset - preNameOffset))); //Content
+                            var names = ClangDebugSymbolsParser.ParseDebugNames(reader, payloadLength, preNameOffset,
+                                functionSignatures);
+                            if (!(names is null)) debugNames = names;
                         }
                         break;
 
@@ -596,8 +602,9 @@ namespace WebAssembly.Runtime
                             {
                                 var signature = functionSignatures[i] = signatures[reader.ReadVarUInt32()];
                                 var parms = signature.ParameterTypes.Concat(new Type[] { exports }).ToArray();
+                                var debugName = (i < debugNames.Length ? debugNames[i] : null) ?? "unknown";
                                 internalFunctions[i] = exportsBuilder.DefineMethod(
-                                    $"👻 {i}",
+                                    $"👻{debugName} {i}",
                                     internalFunctionAttributes,
                                     CallingConventions.Standard,
                                     signature.ReturnTypes.FirstOrDefault(),
@@ -1038,8 +1045,8 @@ namespace WebAssembly.Runtime
                                     if (!delegateInvokersByTypeIndex.TryGetValue(signature.TypeIndex, out var invoker))
                                     {
                                         var del = configuration
-                                            .GetDelegateForType(parms.Length, returns.Length)
-                                            ?.MakeGenericType(parms.Concat(returns).ToArray());
+                                            .GetDelegateForType(parms.Length, returns.Length);
+                                        if (!(del is null) && del.IsGenericType) del = del?.MakeGenericType(parms.Concat(returns).ToArray());
                                         if (del == null)
                                             throw new CompilerException($"Failed to get a delegate for type {signature}.");
                                         delegateInvokersByTypeIndex.Add(signature.TypeIndex, invoker = del.GetTypeInfo().GetDeclaredMethod(nameof(Action.Invoke)));
@@ -1285,7 +1292,6 @@ namespace WebAssembly.Runtime
             instanceConstructorIL.Emit(OpCodes.Ldc_I8, (long) gasLimit);
             instanceConstructorIL.Emit(OpCodes.Conv_U8);
             instanceConstructorIL.Emit(OpCodes.Stsfld, gasLimitField);
-            instanceConstructorIL.EmitWriteLine(gasLimitField);
             
             instanceConstructorIL.Emit(OpCodes.Ret); //Finish the constructor.
             var exportInfo = exportsBuilder.CreateTypeInfo();
@@ -1318,6 +1324,8 @@ namespace WebAssembly.Runtime
             }
 
             module.CreateGlobalFunctions();
+            var gen = new Lokad.ILPack.AssemblyGenerator();
+            gen.GenerateAssembly(module.Assembly, "/home/skird/VirtualBox VMs/Shared/test.dll");
             return instance.DeclaredConstructors.First();
         }
 
