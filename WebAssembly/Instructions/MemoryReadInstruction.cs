@@ -54,7 +54,7 @@ namespace WebAssembly.Instructions
                 case Options.Align8: alignment = 8; break;
             }
 
-            if (alignment != 4)
+            if (alignment != Size)
                 context.Emit(OpCodes.Unaligned, alignment);
 
             context.Emit(this.EmittedOpCode);
