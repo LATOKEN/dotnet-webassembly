@@ -7,7 +7,6 @@ using System.Reflection.Emit;
 using System.Runtime.ExceptionServices;
 using WebAssembly.Runtime.Compilation;
 using WebAssembly.Gas;
-using Lokad.ILPack;
 
 namespace WebAssembly.Runtime
 {
@@ -1260,21 +1259,7 @@ namespace WebAssembly.Runtime
                     var il = method.GetILGenerator();
                     for (var parm = 0; parm < signature.ParameterTypes.Length; parm++)
                     {
-                        switch (parm)
-                        {
-                            case 0:
-                                il.Emit(OpCodes.Ldarg_1);
-                                break;
-                            case 1:
-                                il.Emit(OpCodes.Ldarg_2);
-                                break;
-                            case 2: 
-                                il.Emit(OpCodes.Ldarg_3);
-                                break;
-                            default:
-                                il.Emit(OpCodes.Ldarg, (short) (parm + 1));
-                                break;
-                        }
+                        il.EmitLoadArg(parm + 1);
                     }
 
                     il.Emit(OpCodes.Ldarg_0);
@@ -1324,8 +1309,6 @@ namespace WebAssembly.Runtime
             }
 
             module.CreateGlobalFunctions();
-            var gen = new Lokad.ILPack.AssemblyGenerator();
-            gen.GenerateAssembly(module.Assembly, "/home/skird/VirtualBox VMs/Shared/test.dll");
             return instance.DeclaredConstructors.First();
         }
 
