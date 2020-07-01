@@ -163,6 +163,9 @@ namespace WebAssembly.Runtime
                     return (Instance<TExports>)constructor.Invoke(new object[] { imports });
                 }
                 catch (TargetInvocationException x)
+#if DEBUG
+                when (!System.Diagnostics.Debugger.IsAttached)
+#endif
                 {
                     ExceptionDispatchInfo.Capture(x.InnerException).Throw();
                     throw;
@@ -341,9 +344,12 @@ namespace WebAssembly.Runtime
                                 {
                                     case ExternalKind.Function:
                                         {
+                                            var preTypeIndexOffset = reader.Offset;
                                             var typeIndex = reader.ReadVarUInt32();
                                             if (signatures == null)
                                                 throw new InvalidOperationException();
+                                            if (typeIndex >= signatures.Length)
+                                                throw new ModuleLoadException($"Requested type index {typeIndex} but only {signatures.Length} are available.", preTypeIndexOffset);
                                             var signature = signatures[typeIndex];
                                             var del = configuration.GetDelegateForType(signature.ParameterTypes.Length, signature.ReturnTypes.Length);
                                             if (del == null)
@@ -352,7 +358,7 @@ namespace WebAssembly.Runtime
                                                 continue;
                                             }
 
-                                            var typedDelegate = del.MakeGenericType(signature.ParameterTypes.Concat(signature.ReturnTypes).ToArray());
+                                            var typedDelegate = del.IsGenericTypeDefinition ? del.MakeGenericType(signature.ParameterTypes.Concat(signature.ReturnTypes).ToArray()) : del;
                                             var delField = $"➡ {moduleName}::{fieldName}";
                                             var delFieldBuilder = exportsBuilder.DefineField(delField, typedDelegate, privateReadonlyField);
 
@@ -391,7 +397,7 @@ namespace WebAssembly.Runtime
                                                 .GetTypeInfo()
                                                 .GetDeclaredProperty(nameof(FunctionImport.Method))
                                                 .GetMethod);
-                                            instanceConstructorIL.Emit(OpCodes.Castclass, typedDelegate);
+                                            ImportException.EmitTryCast(instanceConstructorIL, typedDelegate);
                                             instanceConstructorIL.Emit(OpCodes.Stfld, delFieldBuilder);
 
                                             functionImports.Add(invoker);
@@ -461,7 +467,8 @@ namespace WebAssembly.Runtime
                                                 .GetTypeInfo()
                                                 .GetDeclaredProperty(nameof(MemoryImport.Method))
                                                 .GetMethod);
-                                            instanceConstructorIL.Emit(OpCodes.Castclass, typedDelegate);
+                                            ;
+                                            ImportException.EmitTryCast(instanceConstructorIL, typedDelegate);
                                             instanceConstructorIL.Emit(OpCodes.Stfld, delFieldBuilder);
                                         }
                                         break;
@@ -503,7 +510,7 @@ namespace WebAssembly.Runtime
                                                 .GetTypeInfo()
                                                 .GetDeclaredProperty(nameof(GlobalImport.Getter))
                                                 .GetMethod);
-                                            instanceConstructorIL.Emit(OpCodes.Castclass, typedDelegate);
+                                            ImportException.EmitTryCast(instanceConstructorIL, typedDelegate);
                                             instanceConstructorIL.Emit(OpCodes.Stfld, delFieldBuilder);
 
                                             MethodBuilder? setterInvoker;
@@ -547,7 +554,7 @@ namespace WebAssembly.Runtime
                                                     .GetTypeInfo()
                                                     .GetDeclaredProperty(nameof(GlobalImport.Setter))
                                                     .GetMethod);
-                                                instanceConstructorIL.Emit(OpCodes.Castclass, typedDelegate);
+                                                ImportException.EmitTryCast(instanceConstructorIL, typedDelegate);
                                                 instanceConstructorIL.Emit(OpCodes.Stfld, delFieldBuilder);
                                             }
 
@@ -876,6 +883,7 @@ namespace WebAssembly.Runtime
                                                 typeof(FunctionTable),
                                                 emptyTypes
                                                 );
+                                            tableGetter.SetCustomAttribute(NativeExportAttribute.Emit(ExternalKind.Table, name));
                                             var getterIL = tableGetter.GetILGenerator();
                                             getterIL.Emit(OpCodes.Ldarg_0);
                                             getterIL.Emit(OpCodes.Ldfld, functionTable);
@@ -898,6 +906,7 @@ namespace WebAssembly.Runtime
                                                 typeof(UnmanagedMemory),
                                                 emptyTypes
                                                 );
+                                            memoryGetter.SetCustomAttribute(NativeExportAttribute.Emit(ExternalKind.Memory, name));
                                             var getterIL = memoryGetter.GetILGenerator();
                                             getterIL.Emit(OpCodes.Ldarg_0);
                                             getterIL.Emit(OpCodes.Ldfld, memory);
@@ -916,6 +925,7 @@ namespace WebAssembly.Runtime
                                         {
                                             var global = globals[index];
                                             var property = exportsBuilder.DefineProperty(name, PropertyAttributes.None, global.Type.ToSystemType(), emptyTypes);
+                                            property.SetCustomAttribute(NativeExportAttribute.Emit(ExternalKind.Global, name));
                                             var wrappedGet = exportsBuilder.DefineMethod("get_" + name,
                                                 exportedPropertyAttributes,
                                                 CallingConventions.HasThis,
@@ -1255,6 +1265,7 @@ namespace WebAssembly.Runtime
                         signature.ReturnTypes.FirstOrDefault(),
                         signature.ParameterTypes
                         );
+                    method.SetCustomAttribute(NativeExportAttribute.Emit(ExternalKind.Function, exported.Key));
 
                     var il = method.GetILGenerator();
                     for (var parm = 0; parm < signature.ParameterTypes.Length; parm++)
