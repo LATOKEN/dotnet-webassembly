@@ -37,8 +37,9 @@ namespace WebAssembly.Instructions
         {
             var mismatch = string.Join(", ",
                 InstructionTypes
+                .Where(x => !x.IsSubclassOf(typeof(MiscellaneousInstruction)))
                 .Select(type => (
-                OpCode: ((Instruction)type.GetConstructor(System.Type.EmptyTypes).Invoke(null)).OpCode.ToString(),
+                OpCode: ((Instruction)type.GetConstructor(System.Type.EmptyTypes)!.Invoke(null)).OpCode.ToString(),
                 TypeName: type.Name
                 ))
                 .Where(result => result.OpCode != result.TypeName)
@@ -46,6 +47,26 @@ namespace WebAssembly.Instructions
                 );
 
             Assert.AreEqual("", mismatch, "Instructions whose name do not match their opcode found.");
+        }
+
+        /// <summary>
+        /// Ensures that miscellaneous instruction names match their miscellaneous opcode name.
+        /// </summary>
+        [TestMethod]
+        public void Instruction_NameMatchesMiscellaneousOpcode()
+        {
+            var mismatch = string.Join(", ",
+                InstructionTypes
+                    .Where(x => x.IsSubclassOf(typeof(MiscellaneousInstruction)))
+                    .Select(type => (
+                        MiscellaneousOpCode: ((MiscellaneousInstruction)type.GetConstructor(System.Type.EmptyTypes)!.Invoke(null)).MiscellaneousOpCode.ToString(),
+                        TypeName: type.Name
+                    ))
+                    .Where(result => result.MiscellaneousOpCode != result.TypeName)
+                    .Select(result => result.TypeName)
+            );
+
+            Assert.AreEqual("", mismatch, "Instructions whose name do not match their miscellaneous opcode found.");
         }
 
         /// <summary>
@@ -63,6 +84,24 @@ namespace WebAssembly.Instructions
             var missing = string.Join(", ", InstructionTypes.Select(type => type.Name).Except(testClasses));
 
             Assert.AreEqual("", missing, "Instructions with no matching test class found.");
+        }
+
+        /// <summary>
+        /// Ensures that every instruction has a working <see cref="Instruction.ToString"/> implementation.
+        /// </summary>
+        [TestMethod]
+        public void Instruction_ToStringWorks()
+        {
+            InstructionTypes.All(type => !string.IsNullOrWhiteSpace(((Instruction)type.GetConstructor(System.Type.EmptyTypes)!.Invoke(null)).ToString()));
+        }
+
+        /// <summary>
+        /// Ensures that all instructions have a public parameterless constructor.
+        /// </summary>
+        [TestMethod]
+        public void Instruction_HasPublicParameterlessConstructor()
+        {
+            InstructionTypes.All(type => type.GetConstructors().Any(constructor => constructor.GetParameters().Length == 0));
         }
     }
 }

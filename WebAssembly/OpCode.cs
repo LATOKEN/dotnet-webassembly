@@ -1,4 +1,8 @@
-﻿namespace WebAssembly
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+
+namespace WebAssembly
 {
     /// <summary>
     /// Binary opcode values.
@@ -1037,5 +1041,58 @@
         /// </summary>
         [OpCodeCharacteristics("f64.reinterpret_i64")]
         Float64ReinterpretInt64 = 0xbf,
+
+        /// <summary>
+        /// Extend a signed 8-bit integer to a 32-bit integer.
+        /// </summary>
+        [OpCodeCharacteristics("i32.extend8_s")]
+        Int32Extend8Signed = 0xc0,
+
+        /// <summary>
+        /// Extend a signed 16-bit integer to a 32-bit integer.
+        /// </summary>
+        [OpCodeCharacteristics("i32.extend16_s")]
+        Int32Extend16Signed = 0xc1,
+
+        /// <summary>
+        /// Extend a signed 8-bit integer to a 64-bit integer.
+        /// </summary>
+        [OpCodeCharacteristics("i64.extend8_s")]
+        Int64Extend8Signed = 0xc2,
+
+        /// <summary>
+        /// Extend a signed 16-bit integer to a 64-bit integer.
+        /// </summary>
+        [OpCodeCharacteristics("i64.extend16_s")]
+        Int64Extend16Signed = 0xc3,
+
+        /// <summary>
+        /// Extend a signed 32-bit integer to a 64-bit integer.
+        /// </summary>
+        [OpCodeCharacteristics("i64.extend32_s")]
+        Int64Extend32Signed = 0xc4,
+
+        /// <summary>
+        /// Prefix byte for miscellaneous operations.
+        /// </summary>
+        [OpCodeCharacteristics("misc")]
+        MiscellaneousOperationPrefix = 0xfc,
+    }
+
+    static class OpCodeExtensions
+    {
+        private static readonly RegeneratingWeakReference<Dictionary<OpCode, string>> opCodeNativeNamesByOpCode = new RegeneratingWeakReference<Dictionary<OpCode, string>>(
+            () => typeof(OpCode)
+                .GetFields()
+                .Where(field => field.IsStatic)
+                .Select(field => new KeyValuePair<OpCode, string>((OpCode)field.GetValue(null)!, field.GetCustomAttribute<OpCodeCharacteristicsAttribute>()!.Name))
+                .ToDictionary(kv => kv.Key, kv => kv.Value)
+            );
+
+        public static string ToNativeName(this OpCode opCode)
+        {
+            opCodeNativeNamesByOpCode.Reference.TryGetValue(opCode, out var result);
+            return result!;
+        }
     }
 }

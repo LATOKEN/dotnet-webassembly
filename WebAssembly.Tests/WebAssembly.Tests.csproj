@@ -3,6 +3,7 @@
   <PropertyGroup>    
     <TargetFramework>netcoreapp3.1</TargetFramework>    
     <RootNamespace>WebAssembly</RootNamespace>
+    <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
     <TreatSpecificWarningsAsErrors />
   </PropertyGroup>
@@ -17,6 +18,10 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Samples\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\WebAssembly\RegeneratingWeakReference.cs" Link="RegeneratingWeakReference.cs" />
   </ItemGroup>
 
   <ItemGroup>

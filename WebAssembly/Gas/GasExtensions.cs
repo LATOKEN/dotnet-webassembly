@@ -180,6 +180,11 @@ namespace WebAssembly.Gas
                 {OpCode.Int32TruncateFloat32Unsigned, new OpCodeMeteringMetadata(90, false)},
                 {OpCode.Int32TruncateFloat64Signed, new OpCodeMeteringMetadata(90, false)},
                 {OpCode.Int32TruncateFloat64Unsigned, new OpCodeMeteringMetadata(90, false)},
+                {OpCode.Int32Extend8Signed, new OpCodeMeteringMetadata(90, false)},
+                {OpCode.Int32Extend16Signed, new OpCodeMeteringMetadata(90, false)},
+                {OpCode.Int64Extend8Signed, new OpCodeMeteringMetadata(90, false)},
+                {OpCode.Int64Extend16Signed, new OpCodeMeteringMetadata(90, false)},
+                {OpCode.Int64Extend32Signed, new OpCodeMeteringMetadata(90, false)},
                 {OpCode.Int64ExtendInt32Signed, new OpCodeMeteringMetadata(90, false)},
                 {OpCode.Int64ExtendInt32Unsigned, new OpCodeMeteringMetadata(90, false)},
                 {OpCode.Int64TruncateFloat32Signed, new OpCodeMeteringMetadata(90, false)},
@@ -200,6 +205,7 @@ namespace WebAssembly.Gas
                 {OpCode.Int64ReinterpretFloat64, new OpCodeMeteringMetadata(90, false)},
                 {OpCode.Float32ReinterpretInt32, new OpCodeMeteringMetadata(90, false)},
                 {OpCode.Float64ReinterpretInt64, new OpCodeMeteringMetadata(90, false)},
+                {OpCode.MiscellaneousOperationPrefix, new OpCodeMeteringMetadata(90, false)}, // TODO: this might require special treatment
             };
         
         internal static uint Gas(this Instruction instruction)

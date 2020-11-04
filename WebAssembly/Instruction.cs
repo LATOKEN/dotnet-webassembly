@@ -48,6 +48,12 @@ namespace WebAssembly
         public abstract override int GetHashCode();
 
         /// <summary>
+        /// Provides a native representation of the instruction; the base implementation returns the opcode in WASM spec format.
+        /// </summary>
+        /// <returns>A string representation of this instance.</returns>
+        public override string ToString() => this.OpCode.ToNativeName();
+
+        /// <summary>
         /// Parses an instruction stream restricted to the opcodes available for an initializer expression.
         /// </summary>
         /// <param name="reader">The source of binary data.</param>
@@ -287,6 +293,28 @@ namespace WebAssembly
                     case OpCode.Int64ReinterpretFloat64: yield return new Int64ReinterpretFloat64(); break;
                     case OpCode.Float32ReinterpretInt32: yield return new Float32ReinterpretInt32(); break;
                     case OpCode.Float64ReinterpretInt64: yield return new Float64ReinterpretInt64(); break;
+                    case OpCode.Int32Extend8Signed: yield return new Int32Extend8Signed(); break;
+                    case OpCode.Int32Extend16Signed: yield return new Int32Extend16Signed(); break;
+                    case OpCode.Int64Extend8Signed: yield return new Int64Extend8Signed(); break;
+                    case OpCode.Int64Extend16Signed: yield return new Int64Extend16Signed(); break;
+                    case OpCode.Int64Extend32Signed: yield return new Int64Extend32Signed(); break;
+
+                    case OpCode.MiscellaneousOperationPrefix:
+                        var miscellaneousOpCodeOffset = reader.Offset;
+                        var miscellaneousOpCode = (MiscellaneousOpCode)reader.ReadByte();
+                        switch (miscellaneousOpCode)
+                        {
+                            default: throw new ModuleLoadException($"Don't know how to parse miscellaneous opcode \"{miscellaneousOpCode}\".", miscellaneousOpCodeOffset);
+                            case MiscellaneousOpCode.Int32TruncateSaturateFloat32Signed: yield return new Int32TruncateSaturateFloat32Signed(); break;
+                            case MiscellaneousOpCode.Int32TruncateSaturateFloat32Unsigned: yield return new Int32TruncateSaturateFloat32Unsigned(); break;
+                            case MiscellaneousOpCode.Int32TruncateSaturateFloat64Signed: yield return new Int32TruncateSaturateFloat64Signed(); break;
+                            case MiscellaneousOpCode.Int32TruncateSaturateFloat64Unsigned: yield return new Int32TruncateSaturateFloat64Unsigned(); break;
+                            case MiscellaneousOpCode.Int64TruncateSaturateFloat32Signed: yield return new Int64TruncateSaturateFloat32Signed(); break;
+                            case MiscellaneousOpCode.Int64TruncateSaturateFloat32Unsigned: yield return new Int64TruncateSaturateFloat32Unsigned(); break;
+                            case MiscellaneousOpCode.Int64TruncateSaturateFloat64Signed: yield return new Int64TruncateSaturateFloat64Signed(); break;
+                            case MiscellaneousOpCode.Int64TruncateSaturateFloat64Unsigned: yield return new Int64TruncateSaturateFloat64Unsigned(); break;
+                        }
+                        break;
                 }
             }
         }
