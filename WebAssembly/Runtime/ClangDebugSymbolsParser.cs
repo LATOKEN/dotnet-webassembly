@@ -28,7 +28,7 @@ namespace WebAssembly.Runtime
                     if (type != 0x1)
                         break;
                     var count = (int) ReadULEB128(customReader);
-                    if (count > functionSignatures.Length)
+                    if (count > (functionSignatures?.Length ?? 0))
                         break;
 
                     //Console.WriteLine("Functions:\n----------------------------");
