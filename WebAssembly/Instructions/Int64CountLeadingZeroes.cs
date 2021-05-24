@@ -1,5 +1,4 @@
 ﻿using System.Reflection.Emit;
-using WebAssembly.Runtime;
 using WebAssembly.Runtime.Compilation;
 
 namespace WebAssembly.Instructions
@@ -23,14 +22,8 @@ namespace WebAssembly.Instructions
 
         internal sealed override void Compile(CompilationContext context)
         {
-            var stack = context.Stack;
-            if (stack.Count < 1)
-                throw new StackTooSmallException(OpCode.Int64CountLeadingZeroes, 1, stack.Count);
-
-            var type = stack.Peek(); //Assuming validation passes, the remaining type will be this.
-
-            if (type != WebAssemblyValueType.Int64)
-                throw new StackTypeInvalidException(OpCode.Int64CountLeadingZeroes, WebAssemblyValueType.Int64, type);
+            //Assuming validation passes, the remaining type will be Int64.
+            context.ValidateStack(OpCode.Int64CountLeadingZeroes, WebAssemblyValueType.Int64);
 
             context.Emit(OpCodes.Call, context[HelperMethod.Int64CountLeadingZeroes, (helper, c) =>
             {
@@ -87,6 +80,7 @@ namespace WebAssembly.Instructions
                 il.Emit(OpCodes.Starg_S, 0);
 
                 il.Emit(OpCodes.Ldc_I4_S, 64);
+                il.Emit(OpCodes.Conv_I8);
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Call, c[HelperMethod.Int64CountOneBits, Int64CountOneBits.CreateHelper]);
                 il.Emit(OpCodes.Sub);

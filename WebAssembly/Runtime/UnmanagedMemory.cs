@@ -10,11 +10,11 @@ namespace WebAssembly.Runtime
     /// </summary>
     public sealed class UnmanagedMemory : IDisposable
     {
-        internal static readonly RegeneratingWeakReference<MethodInfo> SizeGetter = new RegeneratingWeakReference<MethodInfo>(()
+        internal static readonly RegeneratingWeakReference<MethodInfo> SizeGetter = new(()
             => typeof(UnmanagedMemory).GetTypeInfo().DeclaredProperties.Where(prop => prop.Name == nameof(Size)).First().GetMethod!);
-        internal static readonly RegeneratingWeakReference<MethodInfo> StartGetter = new RegeneratingWeakReference<MethodInfo>(()
+        internal static readonly RegeneratingWeakReference<MethodInfo> StartGetter = new(()
             => typeof(UnmanagedMemory).GetTypeInfo().DeclaredProperties.Where(prop => prop.Name == nameof(Start)).First().GetMethod!);
-        internal static readonly RegeneratingWeakReference<MethodInfo> GrowMethod = new RegeneratingWeakReference<MethodInfo>(()
+        internal static readonly RegeneratingWeakReference<MethodInfo> GrowMethod = new(()
             => typeof(UnmanagedMemory).GetTypeInfo().DeclaredMethods.Where(prop => prop.Name == nameof(Grow)).First());
 
         private bool disposed;
@@ -77,7 +77,7 @@ namespace WebAssembly.Runtime
             if (delta == 0)
                 return oldCurrent;
 
-            unsafe void ZeroMemory(IntPtr s, uint n)
+            static unsafe void ZeroMemory(IntPtr s, uint n)
             {
                 // CIL `initblk` can't be generated from C# (as of v8.0).
                 // Using run-time code generation here would interfere with AoT efforts.

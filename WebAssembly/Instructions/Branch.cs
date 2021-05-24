@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Reflection.Emit;
 using WebAssembly.Runtime.Compilation;
 
@@ -65,9 +66,22 @@ namespace WebAssembly.Instructions
         /// <returns>The hash code.</returns>
         public override int GetHashCode() => HashCode.Combine((int)this.OpCode, (int)this.Index);
 
+        /// <summary>
+        /// Provides a native representation of the instruction.
+        /// </summary>
+        /// <returns>A string representation of this instance.</returns>
+        public override string ToString() => $"{base.ToString()} {Index})";
+
         internal sealed override void Compile(CompilationContext context)
         {
+            var blockType = context.Depth.ElementAt(checked((int)this.Index));
+            if (blockType.OpCode != OpCode.Loop && blockType.Type.TryToValueType(out var expectedType))
+                context.ValidateStack(this.OpCode, expectedType);
+
             context.Emit(OpCodes.Br, context.Labels[checked((uint)context.Depth.Count) - this.Index - 1]);
+
+            //Mark the subsequent code within this block is unreachable
+            context.MarkUnreachable();
         }
     }
 }

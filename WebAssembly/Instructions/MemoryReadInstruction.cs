@@ -24,12 +24,8 @@ namespace WebAssembly.Instructions
         internal sealed override void Compile(CompilationContext context)
         {
             var stack = context.Stack;
-            if (stack.Count == 0)
-                throw new StackTooSmallException(this.OpCode, 1, 0);
 
-            var type = stack.Pop();
-            if (type != WebAssemblyValueType.Int32)
-                throw new StackTypeInvalidException(this.OpCode, WebAssemblyValueType.Int32, type);
+            context.PopStackNoReturn(this.OpCode, WebAssemblyValueType.Int32);
 
             if (this.Offset != 0)
             {
@@ -54,7 +50,11 @@ namespace WebAssembly.Instructions
                 case Options.Align8: alignment = 8; break;
             }
 
-            if (alignment != Size)
+            //8-byte alignment is not available in IL.
+            //See: https://docs.microsoft.com/en-us/dotnet/api/system.reflection.emit.opcodes.unaligned?view=net-5.0
+            //However, because 8-byte alignment is subset of 4-byte alignment,
+            //We don't have to consider it.
+            if (alignment != 4 && alignment != 8)
                 context.Emit(OpCodes.Unaligned, alignment);
 
             context.Emit(this.EmittedOpCode);

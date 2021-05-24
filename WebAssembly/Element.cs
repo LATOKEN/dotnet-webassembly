@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using WebAssembly.Instructions;
 
 namespace WebAssembly
 {
@@ -24,7 +25,7 @@ namespace WebAssembly
         /// <exception cref="ArgumentNullException">Value cannot be set to null.</exception>
         public IList<Instruction> InitializerExpression
         {
-            get => this.initializerExpression ?? (this.initializerExpression = new List<Instruction>());
+            get => this.initializerExpression ??= new List<Instruction>();
             set => this.initializerExpression = value ?? throw new ArgumentNullException(nameof(value));
         }
 
@@ -37,7 +38,7 @@ namespace WebAssembly
         /// <exception cref="ArgumentNullException">Value cannot be set to null.</exception>
         public IList<uint> Elements
         {
-            get => this.elements ?? (this.elements = new List<uint>());
+            get => this.elements ??= new List<uint>();
             set => this.elements = value ?? throw new ArgumentNullException(nameof(value));
         }
 
@@ -46,6 +47,31 @@ namespace WebAssembly
         /// </summary>
         public Element()
         {
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="Element"/> instance with the provided elements.
+        /// </summary>
+        /// <param name="offset">The zero-based offset from the start of the table where <paramref name="elements"/> are placed, retained as the <see cref="InitializerExpression"/>.</param>
+        /// <param name="elements">The table entries.</param>
+        public Element(uint offset, params uint[] elements)
+            : this(offset, (IList<uint>)elements)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="Element"/> instance with the provided elements.
+        /// </summary>
+        /// <param name="offset">The zero-based offset from the start of the table where <paramref name="elements"/> are placed, retained as the <see cref="InitializerExpression"/>.</param>
+        /// <param name="elements">The table entries.</param>
+        public Element(uint offset, IList<uint> elements)
+        {
+            this.initializerExpression = new Instruction[]
+            {
+                new Int32Constant(offset),
+                new End(),
+            };
+            this.elements = elements;
         }
 
         internal Element(Reader reader)

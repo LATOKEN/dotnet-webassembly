@@ -25,26 +25,24 @@ namespace WebAssembly.Instructions
         internal sealed override void Compile(CompilationContext context)
         {
             var stack = context.Stack;
+            var blockType = context.Depth.Count == 0 ? BlockType.Empty : context.Depth.Peek().Type;
 
-            var blockType = context.Depth.Count == 0 ? BlockType.Empty : context.Depth.Pop();
-
-            if (context.Depth.Count == 0)
+            if (context.Depth.Count == 1)
             {
-                if (context.Previous == OpCode.Return)
-                    return; //WebAssembly requires functions to end on "end", but an immediately previous return is allowed.
+                context.MarkLabel(context.Labels[0]);
 
                 var returns = context.CheckedSignature.RawReturnTypes;
                 var returnsLength = returns.Length;
-                if (returnsLength != stack.Count)
+                if (returnsLength < stack.Count || (returnsLength > stack.Count && !context.IsUnreachable))
                     throw new StackSizeIncorrectException(OpCode.End, returnsLength, stack.Count);
 
                 Assert(returnsLength == 0 || returnsLength == 1); //WebAssembly doesn't currently offer multiple returns, which should be blocked earlier.
 
                 if (returnsLength == 1)
                 {
-                    var type = stack.Pop();
-                    if (type != returns[0])
-                        throw new StackTypeInvalidException(OpCode.End, returns[0], type);
+                    var popped = context.PopStack(OpCode.End, returns[0]);
+                    if (!popped.HasValue)
+                        throw new OpCodeCompilationException(OpCode.End, "Cannot determine stack type.");
                 }
 
                 context.Emit(OpCodes.Ret);
@@ -53,10 +51,11 @@ namespace WebAssembly.Instructions
             {
                 if (blockType.TryToValueType(out var expectedType))
                 {
-                    var type = stack.Peek();
-                    if (type != expectedType)
-                        throw new StackTypeInvalidException(OpCode.End, expectedType, type);
+                    context.ValidateStack(OpCode.End, expectedType);
                 }
+
+                context.BlockContexts.Remove(context.Depth.Count);
+                context.Depth.PopNoReturn();
 
                 var depth = checked((uint)context.Depth.Count);
                 var label = context.Labels[depth];

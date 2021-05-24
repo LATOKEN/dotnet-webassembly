@@ -80,10 +80,8 @@ namespace WebAssembly.Runtime
         public static InstanceCreator<TExports> FromBinary<TExports>(string path, CompilerConfiguration configuration, ulong gasLimit = DefaultGasLimit)
         where TExports : class
         {
-            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4 * 1024, FileOptions.SequentialScan))
-            {
-                return FromBinary<TExports>(stream, configuration, gasLimit);
-            }
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4 * 1024, FileOptions.SequentialScan);
+            return FromBinary<TExports>(stream, configuration, gasLimit);
         }
 
         /// <summary>
@@ -201,10 +199,10 @@ namespace WebAssembly.Runtime
             switch (reader.ReadUInt32())
             {
                 case 0x1: //First release
-                case 0xd: //Final pre-release, binary format is identical with first release.
+                // case 0xd: //Final pre-release, binary format is identical with first release.
                     break;
                 default:
-                    throw new ModuleLoadException("Unsupported version, only version 0x1 and 0xd are accepted.", 4);
+                    throw new ModuleLoadException("Unsupported version, only version 0x1 is accepted.", 4);
             }
 
             uint memoryPagesMinimum = 0;
@@ -412,7 +410,7 @@ namespace WebAssembly.Runtime
                                             var limits = new ResizableLimits(reader);
 
                                             if (functionTable != null)
-                                                break; // It's legal to have multiple tables, but the extra tables are inaccessble to the initial version of WebAssembly.
+                                                throw new NotSupportedException("Unable to support multiple tables.");
 
                                             functionTable = context.FunctionTable = CreateFunctionTableField(exportsBuilder);
                                             instanceConstructorIL.Emit(OpCodes.Ldarg_0);
@@ -761,7 +759,7 @@ namespace WebAssembly.Runtime
 
                             var emptySignature = Signature.Empty;
 
-                            for (var i = 0; i < globals.Length; i++)
+                            for (var i = 0; i < count; i++)
                             {
                                 var contentType = (WebAssemblyValueType)reader.ReadVarInt7();
                                 var isMutable = reader.ReadVarUInt1() == 1;
@@ -1015,13 +1013,21 @@ namespace WebAssembly.Runtime
                                 {
                                     var preInitializerOffset = reader.Offset;
                                     var initializer = Instruction.ParseInitializerExpression(reader).ToArray();
-                                    if (initializer.Length != 2 || !(initializer[0] is Instructions.Int32Constant c) || !(initializer[1] is Instructions.End))
+                                    if (initializer.Length != 2 || initializer[0] is not Instructions.Int32Constant c || !(initializer[1] is Instructions.End))
                                         throw new ModuleLoadException("Initializer expression support for the Element section is limited to a single Int32 constant followed by end.", preInitializerOffset);
 
                                     offset = (uint)c.Value;
                                 }
 
+                                var preElementOffset = reader.Offset;
                                 var elements = reader.ReadVarUInt32();
+
+                                if (elements == 0)
+                                    continue;
+
+                                if (functionSignatures == null || internalFunctions == null)
+                                    throw new ModuleLoadException("Element section must be empty if there are no functions to reference.", preElementOffset);
+
                                 var isBigEnough = instanceConstructorIL.DefineLabel();
                                 instanceConstructorIL.Emit(OpCodes.Ldloc, localFunctionTable);
                                 instanceConstructorIL.Emit(OpCodes.Call, FunctionTable.LengthGetter);
@@ -1037,11 +1043,6 @@ namespace WebAssembly.Runtime
                                 instanceConstructorIL.Emit(OpCodes.Pop);
 
                                 instanceConstructorIL.MarkLabel(isBigEnough);
-
-                                if (functionSignatures == null)
-                                    throw new InvalidOperationException();
-                                if (internalFunctions == null)
-                                    throw new InvalidOperationException();
 
                                 for (var j = 0u; j < elements; j++)
                                 {
@@ -1202,6 +1203,7 @@ namespace WebAssembly.Runtime
                                     context.Previous = instruction.OpCode;
                                 }
                                 context.Stack.Pop();
+                                context.BlockContexts.Remove(context.Depth.Count);
                                 instanceConstructorIL.Emit(OpCodes.Stloc, address);
 
                                 var data = reader.ReadBytes(reader.ReadVarUInt32());

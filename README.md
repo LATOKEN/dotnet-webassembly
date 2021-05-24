@@ -1,8 +1,8 @@
 ﻿# WebAssembly for .NET
 [![NuGet](https://img.shields.io/nuget/v/WebAssembly.svg)](https://www.nuget.org/packages/WebAssembly)
 
-A library able to create, read, modify, write and (incomplete) execute WebAssembly (WASM) files from .NET-based applications.
-*Execution does not use an interpreter.*
+A library able to create, read, modify, write and execute WebAssembly (WASM) files from .NET-based applications.
+*Execution does not use an interpreter or a 3rd party library:*
 WASM instructions are mapped to their .NET equivalents and converted to native machine language by the .NET JIT compiler.
 
 Available on NuGet at https://www.nuget.org/packages/WebAssembly .
@@ -10,15 +10,13 @@ Available on NuGet at https://www.nuget.org/packages/WebAssembly .
 ## Getting Started
 
 - Use the `WebAssembly.Module` class to create, read, modify, and write WebAssembly (WASM) binary files.
+  - `Module.ReadFromBinary` reads a stream into an instance, which can then be inspected and modified through its properties.
+  - `WriteToBinary` on a module instance writes binary WASM to the provided stream.
   - There are no known issues with this functionality and the API is stable.
 - Use the `WebAssembly.Runtime.Compile` class to execute WebAssembly (WASM) binary files using the .NET JIT compiler.
-  - Missing features may prevent complex WASMs from working:
-    - Table imports
-    - Handling unreachable code
-    - Various edge cases
-  - No breaking changes are planned for this API, but may be required for full compatibility.
+  - This feature doesn't have 100% spec compliance so it may not work with every WASM you provide.
 
-Please file an issue if you encounter an assembly that works in browsers but not with this library.
+Please report an issue if you encounter an assembly that works in browsers but not with this library.
 
 ## Sample: Create and execute a WebAssembly file in memory
 
@@ -107,20 +105,18 @@ static class Program
 }
 ```
 
-## Development Status
+## Current Development Objectives
 
-### Required for 1.0
+Informational; there is no timelime for completion of these items.
 
-- Leverage the official WebAssembly spec tests to ensure correct behavior.
-- Implement C# 8.0 nullable reference types.
-
-### After 1.0
-
-- Make the compiler extensible: in particular, provide a mechanism to replace the `System.Reflection.Emit.AssemblyBuilder`-affiliated methods with replacements.
-- Support saving generated assemblies as DLLs on .NET Framework via the above extensibility mechanism.
-- If https://github.com/dotnet/corefx/issues/4491 is fixed, enable saving compiled DLLs on .NET Core builds.
+- Improve official specification compliance, using Google Chrome as the reference for correct behavior.
+- Improve exceptions thrown from problems found during compilation or execution.
+- Provide a mechanism to replace the `System.Reflection.Emit.AssemblyBuilder`-affiliated methods with replacements so that something like Mono.Cecil can be used to produce a DLL.
+- If https://github.com/dotnet/corefx/issues/4491 is fixed, use it to enable saving DLLs.
 - Remove the compiler's Data section segment size limit of 4128768 bytes.
+- Add support for new WebAssembly features as they become standardized.
 
 ## Other Information
 
 * [Breaking Change Log](docs/BreakingChanges.md)
+* [Examples](Examples)

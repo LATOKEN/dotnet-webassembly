@@ -45,5 +45,22 @@ namespace WebAssembly.Instructions
             Assert.AreEqual(12, exports.Test(10, -1));
             Assert.AreEqual(11, exports.Test(10, 0));
         }
+
+        /// <summary>
+        /// Tests compilation and execution of the <see cref="Loop"/> instruction that yields a value.
+        /// </summary>
+        [TestMethod]
+        [Timeout(1000)]
+        public void Branch_LoopValue()
+        {
+            var exports = AssemblyBuilder.CreateInstance<dynamic>("Test",
+                WebAssemblyValueType.Int32,
+                new Loop(BlockType.Int32),
+                new Int32Constant(7),
+                new End(),
+                new End());
+
+            Assert.AreEqual<int>(7, exports.Test());
+        }
     }
 }

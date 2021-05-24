@@ -15,7 +15,7 @@ namespace WebAssembly
         /// <summary>
         /// The data acquired from calls to <see cref="Issue7Receive(int)"/>
         /// </summary>
-        private static readonly StringBuilder issue7Received = new StringBuilder();
+        private static readonly StringBuilder issue7Received = new();
 
         /// <summary>
         /// Used with <see cref="Execute_Sample_Issue7"/> to verify a call out from a WebAssembly file.
@@ -35,23 +35,21 @@ namespace WebAssembly
         [TestMethod]
         public void Parse_Sample_Issue7()
         {
-            using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("WebAssembly.Samples.Issue7.wasm"))
-            {
-                Assert.IsNotNull(stream);
-                var module = Module.ReadFromBinary(stream!);
+            using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("WebAssembly.Samples.Issue7.wasm");
+            Assert.IsNotNull(stream);
+            var module = Module.ReadFromBinary(stream!);
 
-                Assert.AreEqual(2, module.Codes.Count);
-                Assert.AreEqual(9, module.CustomSections.Count);
-                Assert.AreEqual(0, module.Data.Count);
-                Assert.AreEqual(0, module.Elements.Count);
-                Assert.AreEqual(4, module.Exports.Count);
-                Assert.AreEqual(2, module.Functions.Count);
-                Assert.AreEqual(1, module.Imports.Count);
-                Assert.AreEqual(1, module.Memories.Count);
-                Assert.IsNull(module.Start);
-                Assert.AreEqual(1, module.Tables.Count);
-                Assert.AreEqual(3, module.Types.Count);
-            }
+            Assert.AreEqual(2, module.Codes.Count);
+            Assert.AreEqual(9, module.CustomSections.Count);
+            Assert.AreEqual(0, module.Data.Count);
+            Assert.AreEqual(0, module.Elements.Count);
+            Assert.AreEqual(4, module.Exports.Count);
+            Assert.AreEqual(2, module.Functions.Count);
+            Assert.AreEqual(1, module.Imports.Count);
+            Assert.AreEqual(1, module.Memories.Count);
+            Assert.IsNull(module.Start);
+            Assert.AreEqual(1, module.Tables.Count);
+            Assert.AreEqual(3, module.Types.Count);
         }
 
         /// <summary>

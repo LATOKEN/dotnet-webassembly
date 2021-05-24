@@ -29,7 +29,7 @@ namespace WebAssembly
         /// <exception cref="ArgumentNullException">Value cannot be set to null.</exception>
         public IList<Instruction> InitializerExpression
         {
-            get => this.initializerExpression ?? (this.initializerExpression = new List<Instruction>());
+            get => this.initializerExpression ??= new List<Instruction>();
             set => this.initializerExpression = value ?? throw new ArgumentNullException(nameof(value));
         }
 
@@ -38,6 +38,27 @@ namespace WebAssembly
         /// </summary>
         public Global()
         {
+        }
+
+
+        /// <summary>
+        /// Creates a new <see cref="Global"/> instance with the provided content type.
+        /// </summary>
+        /// <param name="contentType">The <see cref="ContentType"/> value.</param>
+        public Global(WebAssemblyValueType contentType)
+        {
+            this.ContentType = contentType;
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="Global"/> instance with the provided content type and initializer expression.
+        /// </summary>
+        /// <param name="contentType">The <see cref="ContentType"/> value.</param>
+        /// <param name="initializerExpression">The <see cref="InitializerExpression"/> value.</param>
+        public Global(WebAssemblyValueType contentType, params Instruction[] initializerExpression)
+        {
+            this.ContentType = contentType;
+            this.initializerExpression = initializerExpression;
         }
 
         internal Global(Reader reader)

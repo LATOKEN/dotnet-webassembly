@@ -1,5 +1,4 @@
 using System.Reflection.Emit;
-using WebAssembly.Runtime;
 using WebAssembly.Runtime.Compilation;
 
 namespace WebAssembly.Instructions
@@ -23,13 +22,11 @@ namespace WebAssembly.Instructions
 
         internal sealed override void Compile(CompilationContext context)
         {
-            var blockType = context.Depth.Count == 0 ? BlockType.Empty : context.Depth.Peek();
+            var blockType = context.Depth.Count == 0 ? BlockType.Empty : context.Depth.Peek().Type;
 
             if (blockType.TryToValueType(out var expectedType))
             {
-                var type = context.Stack.Pop();
-                if (type != expectedType)
-                    throw new StackTypeInvalidException(OpCode.Else, expectedType, type);
+                context.PopStackNoReturn(OpCode.Else, expectedType);
             }
 
             var afterElse = context.DefineLabel();
@@ -38,6 +35,9 @@ namespace WebAssembly.Instructions
             var target = checked((uint)context.Depth.Count) - 1;
             context.MarkLabel(context.Labels[target]);
             context.Labels[target] = afterElse;
+
+            //Else-block is reachable even if the then-block is unreachable
+            context.MarkReachable();
         }
     }
 }

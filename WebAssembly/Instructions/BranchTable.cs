@@ -25,7 +25,7 @@ namespace WebAssembly.Instructions
         /// <exception cref="ArgumentNullException">Value cannot be set to null.</exception>
         public IList<uint> Labels
         {
-            get => this.labels ?? (this.labels = new List<uint>());
+            get => this.labels ??= new List<uint>();
             set => this.labels = value ?? throw new ArgumentNullException(nameof(value));
         }
 
@@ -121,17 +121,26 @@ namespace WebAssembly.Instructions
 
         internal sealed override void Compile(CompilationContext context)
         {
-            var stack = context.Stack;
-            if (stack.Count == 0)
-                throw new StackTooSmallException(OpCode.BranchTable, 1, 0);
+            context.PopStackNoReturn(OpCode.BranchTable, WebAssemblyValueType.Int32);
 
-            var type = stack.Pop();
-            if (type != WebAssemblyValueType.Int32)
-                throw new StackTypeInvalidException(OpCode.BranchTable, WebAssemblyValueType.Int32, type);
+            var defaultLabelType = context.Depth.ElementAt(checked((int)this.DefaultLabel));
+            if (defaultLabelType.OpCode != OpCode.Loop && defaultLabelType.Type.TryToValueType(out var expectedType))
+                context.ValidateStack(this.OpCode, expectedType);
+
+            //All target labels should have the same type
+            foreach (var label in this.Labels)
+            {
+                var labelType = context.Depth.ElementAt(checked((int)label)).Type;
+                if (labelType != defaultLabelType.Type)
+                    throw new LabelTypeMismatchException(this.OpCode, defaultLabelType.Type, labelType);
+            }
 
             var blockDepth = checked((uint)context.Depth.Count);
             context.Emit(OpCodes.Switch, this.Labels.Select(index => context.Labels[blockDepth - index - 1]).ToArray());
             context.Emit(OpCodes.Br, context.Labels[blockDepth - this.DefaultLabel - 1]);
+
+            //Mark the subsequent code within this block is unreachable
+            context.MarkUnreachable();
         }
     }
 }

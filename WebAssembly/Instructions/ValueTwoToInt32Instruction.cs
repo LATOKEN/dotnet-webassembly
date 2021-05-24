@@ -1,5 +1,4 @@
-﻿using WebAssembly.Runtime;
-using WebAssembly.Runtime.Compilation;
+﻿using WebAssembly.Runtime.Compilation;
 
 namespace WebAssembly.Instructions
 {
@@ -19,17 +18,8 @@ namespace WebAssembly.Instructions
         internal override void Compile(CompilationContext context)
         {
             var stack = context.Stack;
-            if (stack.Count < 2)
-                throw new StackTooSmallException(this.OpCode, 2, stack.Count);
 
-            var typeB = stack.Pop();
-            var typeA = stack.Pop();
-
-            if (typeA != this.ValueType)
-                throw new StackTypeInvalidException(this.OpCode, this.ValueType, typeA);
-
-            if (typeA != typeB)
-                throw new StackParameterMismatchException(this.OpCode, typeA, typeB);
+            context.PopStackNoReturn(this.OpCode, this.ValueType, this.ValueType);
 
             stack.Push(WebAssemblyValueType.Int32);
 

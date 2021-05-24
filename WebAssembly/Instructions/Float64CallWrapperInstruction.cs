@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using System.Reflection.Emit;
-using WebAssembly.Runtime;
 using WebAssembly.Runtime.Compilation;
 
 namespace WebAssembly.Instructions
@@ -18,13 +17,8 @@ namespace WebAssembly.Instructions
 
         internal sealed override void Compile(CompilationContext context)
         {
-            var stack = context.Stack;
-            if (stack.Count == 0)
-                throw new StackTooSmallException(this.OpCode, 1, 0);
-
-            var type = stack.Peek();  //Assuming validation passes, the remaining type will be this.
-            if (type != WebAssemblyValueType.Float32)
-                throw new StackTypeInvalidException(this.OpCode, WebAssemblyValueType.Float32, type);
+            //Assuming validation passes, the remaining type will be Float32.
+            context.ValidateStack(this.OpCode, WebAssemblyValueType.Float32);
 
             context.Emit(OpCodes.Conv_R8);
             context.Emit(OpCodes.Call, this.MethodInfo);

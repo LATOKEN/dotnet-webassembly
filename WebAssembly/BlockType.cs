@@ -35,7 +35,7 @@
             {
                 default:
                 case BlockType.Empty:
-                    valueType = WebAssemblyValueType.Int32;
+                    valueType = default;
                     return false;
                 case BlockType.Int32:
                     valueType = WebAssemblyValueType.Int32;
@@ -53,5 +53,15 @@
 
             return true;
         }
+
+        public static string ToTypeString(this BlockType blockType) => blockType switch
+        {
+            BlockType.Int32 => "i32",
+            BlockType.Int64 => "i64",
+            BlockType.Float32 => "f32",
+            BlockType.Float64 => "f64",
+            BlockType.Empty => "",
+            _ => "?",
+        };
     }
 }

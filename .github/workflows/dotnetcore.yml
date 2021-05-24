@@ -1,4 +1,4 @@
-name: .NET Core
+name: Build and Test
 
 on: [push, pull_request]
 
@@ -9,13 +9,21 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Setup .NET Core
+    - name: Setup .NET Core 3.1
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 3.1.101
+        dotnet-version: 3.1.x
+    - name: Setup .NET 5
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.x
     - name: Install dependencies
       run: dotnet restore
-    - name: Build
+    # Debug and Release mighht be different due to conditional compilation, so validate both.
+    - name: Build (Debug)
+      run: dotnet build --configuration Debug --no-restore
+    - name: Build (Release)
       run: dotnet build --configuration Release --no-restore
     - name: Test
       run: dotnet test --configuration Release --no-build --verbosity normal
+    # Not safe to test Debug build as it runs tests in parallel, occasional triggering a bug in the test adapter.

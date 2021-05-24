@@ -1,5 +1,4 @@
 ﻿using System.Reflection.Emit;
-using WebAssembly.Runtime;
 using WebAssembly.Runtime.Compilation;
 
 namespace WebAssembly.Instructions
@@ -23,17 +22,7 @@ namespace WebAssembly.Instructions
 
         internal sealed override void Compile(CompilationContext context)
         {
-            var stack = context.Stack;
-            if (stack.Count < 1)
-                throw new StackTooSmallException(OpCode.Float32CopySign, 1, stack.Count);
-
-            var type = stack.Pop();
-            if (type != WebAssemblyValueType.Float32)
-                throw new StackTypeInvalidException(OpCode.Float32CopySign, WebAssemblyValueType.Float32, type);
-
-            type = stack.Peek(); //Assuming validation passes, the remaining type will be this.
-            if (type != WebAssemblyValueType.Float32)
-                throw new StackTypeInvalidException(OpCode.Float32CopySign, WebAssemblyValueType.Float32, type);
+            context.PopStackNoReturn(OpCode.Float32CopySign, WebAssemblyValueType.Float32, WebAssemblyValueType.Float32);
 
             context.Emit(OpCodes.Call, context[HelperMethod.Float32CopySign, (helper, c) =>
             {
@@ -68,6 +57,8 @@ namespace WebAssembly.Instructions
                 return builder;
             }
             ]);
+
+            context.Stack.Push(WebAssemblyValueType.Float32);
         }
     }
 }

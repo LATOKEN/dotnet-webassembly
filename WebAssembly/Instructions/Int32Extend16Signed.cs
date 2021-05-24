@@ -1,5 +1,4 @@
 using System.Reflection.Emit;
-using WebAssembly.Runtime;
 using WebAssembly.Runtime.Compilation;
 
 namespace WebAssembly.Instructions
@@ -24,13 +23,8 @@ namespace WebAssembly.Instructions
         internal sealed override void Compile(CompilationContext context)
         {
             var stack = context.Stack;
-            if (stack.Count < 1)
-                throw new StackTooSmallException(this.OpCode, 1, stack.Count);
 
-            var type = stack.Pop();
-
-            if (type != WebAssemblyValueType.Int32)
-                throw new StackTypeInvalidException(this.OpCode, WebAssemblyValueType.Int32, type);
+            context.PopStackNoReturn(this.OpCode, WebAssemblyValueType.Int32);
 
             context.Emit(OpCodes.Conv_I2);
             context.Emit(OpCodes.Conv_I4);
