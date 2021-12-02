@@ -9,6 +9,11 @@ namespace WebAssembly.Runtime
     public class CompilerConfiguration
     {
         /// <summary>
+        /// Whether compiler should ignore code after the end of module.
+        /// </summary>
+        public bool IgnoreEndingCode { get; set; }
+
+        /// <summary>
         /// Creates a new <see cref="CompilerConfiguration"/> instance with default properties.
         /// </summary>
         public CompilerConfiguration()

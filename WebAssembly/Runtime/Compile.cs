@@ -1246,6 +1246,10 @@ namespace WebAssembly.Runtime
                         throw new ModuleLoadException($"Unrecognized section type {(Section)id}.", preSectionOffset);
                 }
 
+                if (configuration.IgnoreEndingCode == true && previousSection == Section.None && (Section)id == Section.None) {
+                    break;
+                }
+
                 preSectionOffset = reader.Offset;
                 previousSection = (Section)id;
             }
